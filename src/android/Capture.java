@@ -27,6 +27,7 @@ import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.concurrent.ExecutionException;
 
 import android.content.ActivityNotFoundException;
 import android.os.Build;
@@ -90,6 +91,7 @@ public class Capture extends CordovaPlugin {
 
     private int numPics;                            // Number of pictures before capture activity
     private Uri imageUri;
+    private Uri videoUri;
 
 //    public void setContext(Context mCtx)
 //    {
@@ -315,13 +317,31 @@ public class Capture extends CordovaPlugin {
      */
     private void captureVideo(Request req) {
         if (isMissingCameraPermissions(req)) return;
-
         Intent intent = new Intent(android.provider.MediaStore.ACTION_VIDEO_CAPTURE);
 
-        if(Build.VERSION.SDK_INT > 7){
-            intent.putExtra("android.intent.extra.durationLimit", req.duration);
-            intent.putExtra("android.intent.extra.videoQuality", req.quality);
+        final ContentResolver contentResolver = this.cordova.getActivity().getContentResolver();
+        final ContentValues contentValues = new ContentValues();
+        contentValues.put(MediaStore.Images.Media.MIME_TYPE, VIDEO_MP4); // 3gp in some cases?
+        try {
+            cordova.getThreadPool().submit(new Runnable() {
+                @Override
+                public void run() {
+                    videoUri = contentResolver.insert(MediaStore.Video.Media.EXTERNAL_CONTENT_URI, contentValues);
+                    File file = webView.getResourceApi().mapUriToFile(videoUri);
+                    if (file != null && !file.getParentFile().exists()) {
+                        file.getParentFile().mkdirs();
+                    }
+                }
+            }).get(); // get() blocks the thread
+        } catch (ExecutionException | InterruptedException e) {
+            throw new RuntimeException(e);
         }
+        LOG.d(LOG_TAG, "Taking a video and saving to: " + videoUri.toString());
+        intent.putExtra(android.provider.MediaStore.EXTRA_OUTPUT, videoUri);
+
+        intent.putExtra("android.intent.extra.durationLimit", req.duration);
+        intent.putExtra("android.intent.extra.videoQuality", req.quality);
+
         this.cordova.startActivityForResult((CordovaPlugin) this, intent, req.requestCode);
     }
 
@@ -601,3 +621,4 @@ public class Capture extends CordovaPlugin {
         pendingRequests.setLastSavedState(state, callbackContext);
     }
 }
+
