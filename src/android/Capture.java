@@ -434,32 +434,30 @@ public class Capture extends CordovaPlugin {
     }
 
     public void onVideoActivityResult(Request req, Intent intent) {
-        Uri data = null;
-
-        if (intent != null){
-            // Get the uri of the video clip
-            data = intent.getData();
-        }
-
-        if( data == null){
-            File movie = new File(getTempDirectoryPath(), "Capture.avi");
-            data = Uri.fromFile(movie);
-        }
-
-        // create a file object from the uri
-        if(data == null) {
-            pendingRequests.resolveWithFailure(req, createErrorObject(CAPTURE_NO_MEDIA_FILES, "Error: data is null"));
-        }
-        else {
-            req.results.put(createMediaFile(data));
-
-            if (req.results.length() >= req.limit) {
-                // Send Uri back to JavaScript for viewing video
-                pendingRequests.resolveWithSuccess(req);
-            } else {
-                // still need to capture more video clips
-                captureVideo(req);
+        try {
+            if(videoUri == null){
+                File movie = new File(getTempDirectoryPath(), "Capture.avi");
+                videoUri = Uri.fromFile(movie);
             }
+
+            // create a file object from the uri
+            if (videoUri == null) {
+                pendingRequests.resolveWithFailure(req, createErrorObject(CAPTURE_NO_MEDIA_FILES, "Error: data is null"));
+            }
+            else {
+                req.results.put(createMediaFile(videoUri));
+                if (req.results.length() >= req.limit) {
+                    // Send Uri back to JavaScript for viewing video
+                    pendingRequests.resolveWithSuccess(req);
+                } else {
+                    // still need to capture more video clips
+                    captureVideo(req);
+                }
+            }
+        } catch (Exception e) {
+            LOG.e(LOG_TAG, e.getMessage());
+        } finally {
+            videoUri = null;
         }
     }
 
