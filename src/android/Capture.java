@@ -338,10 +338,15 @@ public class Capture extends CordovaPlugin {
                 }
             }).get(); // get() blocks the thread
             LOG.d(LOG_TAG, "Taking a video and saving to: " + videoUri.toString());
-            intent.putExtra(android.provider.MediaStore.EXTRA_OUTPUT, videoUri);
-
-            intent.putExtra("android.intent.extra.durationLimit", req.duration);
-            intent.putExtra("android.intent.extra.videoQuality", req.quality);
+            if(Build.VERSION.SDK_INT != 33){
+               // There appears to be a bug in 33 that if we set these it doesn't call generateVideoValues()
+               // See https://android.googlesource.com/platform/packages/apps/Camera2/+/refs/heads/android13-release/src/com/android/camera/VideoModule.java
+               // VideoModule.java:1263
+               // java.lang.NullPointerException: Attempt to invoke virtual method 'void android.content.ContentValues.put(java.lang.String, java.lang.Long)' on a null object reference
+               intent.putExtra(android.provider.MediaStore.EXTRA_OUTPUT, videoUri);
+               intent.putExtra("android.intent.extra.durationLimit", req.duration);
+               intent.putExtra("android.intent.extra.videoQuality", req.quality);
+            }
 
             this.cordova.startActivityForResult((CordovaPlugin) this, intent, req.requestCode);
         } catch (InterruptedException e) {
@@ -442,6 +447,9 @@ public class Capture extends CordovaPlugin {
 
     public void onVideoActivityResult(Request req, Intent intent) {
         try {
+            if(intent != null) {
+                videoUri = intent.getData();
+            }
             if(videoUri == null){
                 File movie = new File(getTempDirectoryPath(), "Capture.avi");
                 videoUri = Uri.fromFile(movie);
