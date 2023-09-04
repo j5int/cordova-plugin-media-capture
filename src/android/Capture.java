@@ -344,11 +344,10 @@ public class Capture extends CordovaPlugin {
                // VideoModule.java:1263
                // java.lang.NullPointerException: Attempt to invoke virtual method 'void android.content.ContentValues.put(java.lang.String, java.lang.Long)' on a null object reference
                intent.putExtra(android.provider.MediaStore.EXTRA_OUTPUT, videoUri);
-
-
+               intent.putExtra("android.intent.extra.durationLimit", req.duration);
+               intent.putExtra("android.intent.extra.videoQuality", req.quality);
             }
-           intent.putExtra("android.intent.extra.durationLimit", req.duration);
-           intent.putExtra("android.intent.extra.videoQuality", req.quality);
+
             this.cordova.startActivityForResult((CordovaPlugin) this, intent, req.requestCode);
         } catch (InterruptedException e) {
             pendingRequests.resolveWithFailure(req, createErrorObject(CANNOT_CREATE_TARGET_DIRECTORY, "Thread interrupted while creating path for new video"));
