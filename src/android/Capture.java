@@ -33,6 +33,7 @@ import android.content.ActivityNotFoundException;
 import android.os.Build;
 import android.os.Bundle;
 
+import org.apache.cordova.BuildHelper;
 import org.apache.cordova.file.FileUtils;
 import org.apache.cordova.file.LocalFilesystemURL;
 
@@ -59,6 +60,7 @@ import android.media.MediaPlayer;
 import android.net.Uri;
 import android.os.Environment;
 import android.provider.MediaStore;
+import androidx.core.content.FileProvider;
 
 public class Capture extends CordovaPlugin {
 
@@ -94,6 +96,7 @@ public class Capture extends CordovaPlugin {
     private int numPics;                            // Number of pictures before capture activity
     private Uri imageUri;
     private Uri videoUri;
+    private String applicationId;
 
 //    public void setContext(Context mCtx)
 //    {
@@ -132,6 +135,10 @@ public class Capture extends CordovaPlugin {
 
     @Override
     public boolean execute(String action, JSONArray args, CallbackContext callbackContext) throws JSONException {
+        this.applicationId = (String) BuildHelper.getBuildConfigValue(cordova.getActivity(), "APPLICATION_ID");
+        this.applicationId = preferences.getString("applicationId", this.applicationId);
+
+
         if (action.equals("getFormatData")) {
             JSONObject obj = getFormatData(args.getString(0), args.getString(1));
             callbackContext.success(obj);
@@ -326,34 +333,15 @@ public class Capture extends CordovaPlugin {
         final ContentResolver contentResolver = this.cordova.getActivity().getContentResolver();
         final ContentValues contentValues = new ContentValues();
         contentValues.put(MediaStore.Images.Media.MIME_TYPE, VIDEO_MP4); // 3gp in some cases?
-        try {
-            cordova.getThreadPool().submit(new Runnable() {
-                @Override
-                public void run() {
-                    videoUri = contentResolver.insert(MediaStore.Video.Media.EXTERNAL_CONTENT_URI, contentValues);
-                    File file = webView.getResourceApi().mapUriToFile(videoUri);
-                    if (file != null && !file.getParentFile().exists()) {
-                        file.getParentFile().mkdirs();
-                    }
-                }
-            }).get(); // get() blocks the thread
-            LOG.d(LOG_TAG, "Taking a video and saving to: " + videoUri.toString());
-            if(Build.VERSION.SDK_INT != 33){
-               // There appears to be a bug in 33 that if we set these it doesn't call generateVideoValues()
-               // See https://android.googlesource.com/platform/packages/apps/Camera2/+/refs/heads/android13-release/src/com/android/camera/VideoModule.java
-               // VideoModule.java:1263
-               // java.lang.NullPointerException: Attempt to invoke virtual method 'void android.content.ContentValues.put(java.lang.String, java.lang.Long)' on a null object reference
-               intent.putExtra(android.provider.MediaStore.EXTRA_OUTPUT, videoUri);
-               intent.putExtra("android.intent.extra.durationLimit", req.duration);
-               intent.putExtra("android.intent.extra.videoQuality", req.quality);
-            }
 
-            this.cordova.startActivityForResult((CordovaPlugin) this, intent, req.requestCode);
-        } catch (InterruptedException e) {
-            pendingRequests.resolveWithFailure(req, createErrorObject(CANNOT_CREATE_TARGET_DIRECTORY, "Thread interrupted while creating path for new video"));
-        } catch (ExecutionException e) {
-            pendingRequests.resolveWithFailure(req, createErrorObject(CANNOT_CREATE_TARGET_DIRECTORY, "Exception raised while creating folder for new video"));
-        }
+        File video = new File(getTempDirectoryPath(), "Capture.mp4");
+        videoUri = FileProvider.getUriForFile(cordova.getActivity(),applicationId + ".cordova.plugin.mediacapture.provider", video);
+
+        intent.putExtra(android.provider.MediaStore.EXTRA_OUTPUT, videoUri);
+        intent.putExtra("android.intent.extra.durationLimit", req.duration);
+        intent.putExtra("android.intent.extra.videoQuality", req.quality);
+
+        this.cordova.startActivityForResult((CordovaPlugin) this, intent, req.requestCode);
 
     }
 
@@ -484,7 +472,7 @@ public class Capture extends CordovaPlugin {
      * @throws IOException
      */
     private JSONObject createMediaFile(Uri data) {
-        File fp = webView.getResourceApi().mapUriToFile(data);
+        File fp = new File(getTempDirectoryPath() + "/Capture.mp4");
         JSONObject obj = new JSONObject();
 
         Class webViewClass = webView.getClass();
