@@ -25,6 +25,9 @@ import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.Arrays;
+import org.apache.cordova.BuildHelper;
+import org.apache.cordova.file.FileUtils;
+import org.apache.cordova.file.LocalFilesystemURL;
 
 import org.apache.cordova.CallbackContext;
 import org.apache.cordova.CordovaPlugin;
@@ -54,6 +57,7 @@ import android.os.Build;
 import android.os.Bundle;
 import android.os.Environment;
 import android.provider.MediaStore;
+import androidx.core.content.FileProvider;
 
 public class Capture extends CordovaPlugin {
 
@@ -94,6 +98,8 @@ public class Capture extends CordovaPlugin {
 
     private int numPics;                            // Number of pictures before capture activity
     private Uri imageUri;
+    private Uri videoUri;
+    private String applicationId;
 
 //    public void setContext(Context mCtx)
 //    {
@@ -132,6 +138,10 @@ public class Capture extends CordovaPlugin {
 
     @Override
     public boolean execute(String action, JSONArray args, CallbackContext callbackContext) throws JSONException {
+        this.applicationId = (String) BuildHelper.getBuildConfigValue(cordova.getActivity(), "APPLICATION_ID");
+        this.applicationId = preferences.getString("applicationId", this.applicationId);
+
+
         if (action.equals("getFormatData")) {
             JSONObject obj = getFormatData(args.getString(0), args.getString(1));
             callbackContext.success(obj);
@@ -283,6 +293,17 @@ public class Capture extends CordovaPlugin {
         }
     }
 
+    private String getTempDirectoryPath() {
+        File cache = null;
+
+        // Use internal storage
+        cache = cordova.getActivity().getCacheDir();
+
+        // Create the cache directory if it doesn't exist
+        cache.mkdirs();
+        return cache.getAbsolutePath();
+    }
+
     /**
      * Sets up an intent to capture images.  Result handled by onActivityResult()
      */
@@ -314,9 +335,18 @@ public class Capture extends CordovaPlugin {
         Intent intent = new Intent(android.provider.MediaStore.ACTION_VIDEO_CAPTURE);
 
         if(Build.VERSION.SDK_INT > 7){
+            final ContentResolver contentResolver = this.cordova.getActivity().getContentResolver();
+            final ContentValues contentValues = new ContentValues();
+            contentValues.put(MediaStore.Images.Media.MIME_TYPE, VIDEO_MP4); // 3gp in some cases?
+
+            File video = new File(getTempDirectoryPath(), "Capture.mp4");
+            videoUri = FileProvider.getUriForFile(cordova.getActivity(),applicationId + ".cordova.plugin.mediacapture.provider", video);
+
+            intent.putExtra(android.provider.MediaStore.EXTRA_OUTPUT, videoUri);
             intent.putExtra("android.intent.extra.durationLimit", req.duration);
             intent.putExtra("android.intent.extra.videoQuality", req.quality);
         }
+
         this.cordova.startActivityForResult((CordovaPlugin) this, intent, req.requestCode);
     }
 
@@ -468,7 +498,7 @@ public class Capture extends CordovaPlugin {
     private JSONObject createMediaFile(Uri data) {
         File fp = webView.getResourceApi().mapUriToFile(data);
         if (fp == null) {
-            return null;
+            fp = new File(getTempDirectoryPath() + "/Capture.mp4");
         }
 
         JSONObject obj = new JSONObject();
