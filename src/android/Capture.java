@@ -510,7 +510,7 @@ public class Capture extends CordovaPlugin {
     private JSONObject createMediaFile(Uri data) {
         File fp = webView.getResourceApi().mapUriToFile(data);
         if (fp == null) {
-            fp = new File(getTempDirectoryPath() + "/Capture.mp4");
+            return null;
         }
 
         JSONObject obj = new JSONObject();
