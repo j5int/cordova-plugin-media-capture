@@ -467,30 +467,36 @@ public class Capture extends CordovaPlugin {
     }
 
     public void onVideoActivityResult(Request req, Intent intent) {
-        // Get the uri of the video clip
-        if(intent != null) {
-            videoUri = intent.getData();
-        }
-        if (videoUri == null) {
-            pendingRequests.resolveWithFailure(req, createErrorObject(CAPTURE_NO_MEDIA_FILES, "Error: data is null"));
-            return;
-        }
+        try {
+            // Get the uri of the video clip
+            if(intent != null) {
+                videoUri = intent.getData();
+            }
+            if (videoUri == null) {
+                pendingRequests.resolveWithFailure(req, createErrorObject(CAPTURE_NO_MEDIA_FILES, "Error: data is null"));
+                return;
+            }
 
-        // Create a file object from the uri
-        JSONObject mediaFile = createMediaFile(videoUri);
-        if (mediaFile == null) {
-            pendingRequests.resolveWithFailure(req, createErrorObject(CAPTURE_INTERNAL_ERR, "Error: no mediaFile created from " + videoUri));
-            return;
-        }
+            // Create a file object from the uri
+            JSONObject mediaFile = createMediaFile(videoUri);
+            if (mediaFile == null) {
+                pendingRequests.resolveWithFailure(req, createErrorObject(CAPTURE_INTERNAL_ERR, "Error: no mediaFile created from " + videoUri));
+                return;
+            }
 
-        req.results.put(mediaFile);
+            req.results.put(mediaFile);
 
-        if (req.results.length() >= req.limit) {
-            // Send Uri back to JavaScript for viewing video
-            pendingRequests.resolveWithSuccess(req);
-        } else {
-            // still need to capture more video clips
-            captureVideo(req);
+            if (req.results.length() >= req.limit) {
+                // Send Uri back to JavaScript for viewing video
+                pendingRequests.resolveWithSuccess(req);
+            } else {
+                // still need to capture more video clips
+                captureVideo(req);
+            }
+        } catch (Exception e) {
+            LOG.e(LOG_TAG, e.getMessage());
+        } finally {
+            videoUri = null;
         }
     }
 
