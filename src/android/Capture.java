@@ -334,14 +334,18 @@ public class Capture extends CordovaPlugin {
 
         Intent intent = new Intent(android.provider.MediaStore.ACTION_VIDEO_CAPTURE);
 
-        if(Build.VERSION.SDK_INT > 7){
-            final ContentResolver contentResolver = this.cordova.getActivity().getContentResolver();
-            final ContentValues contentValues = new ContentValues();
-            contentValues.put(MediaStore.Images.Media.MIME_TYPE, VIDEO_MP4); // 3gp in some cases?
+        final ContentResolver contentResolver = this.cordova.getActivity().getContentResolver();
+        final ContentValues contentValues = new ContentValues();
+        contentValues.put(MediaStore.Images.Media.MIME_TYPE, VIDEO_MP4); // 3gp in some cases?
 
-            File video = new File(getTempDirectoryPath(), "Capture.mp4");
-            videoUri = FileProvider.getUriForFile(cordova.getActivity(),applicationId + ".cordova.plugin.mediacapture.provider", video);
-
+        File video = new File(getTempDirectoryPath(), "Capture.mp4");
+        videoUri = FileProvider.getUriForFile(cordova.getActivity(),applicationId + ".cordova.plugin.mediacapture.provider", video);
+        
+        if(Build.VERSION.SDK_INT > 7 && Build.VERSION.SDK_INT != 33){
+            // There appears to be a bug in 33 that if we set these it doesn't call generateVideoValues()
+            // See https://android.googlesource.com/platform/packages/apps/Camera2/+/refs/heads/android13-release/src/com/android/camera/VideoModule.java
+            // VideoModule.java:1263
+            // java.lang.NullPointerException: Attempt to invoke virtual method 'void android.content.ContentValues.put(java.lang.String, java.lang.Long)' on a null object reference
             intent.putExtra(android.provider.MediaStore.EXTRA_OUTPUT, videoUri);
             intent.putExtra("android.intent.extra.durationLimit", req.duration);
             intent.putExtra("android.intent.extra.videoQuality", req.quality);
