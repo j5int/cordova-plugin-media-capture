@@ -340,7 +340,7 @@ public class Capture extends CordovaPlugin {
 
         File video = new File(getTempDirectoryPath(), "Capture.mp4");
         videoUri = FileProvider.getUriForFile(cordova.getActivity(),applicationId + ".cordova.plugin.mediacapture.provider", video);
-        
+
         if(Build.VERSION.SDK_INT > 7 && Build.VERSION.SDK_INT != 33){
             // There appears to be a bug in 33 that if we set these it doesn't call generateVideoValues()
             // See https://android.googlesource.com/platform/packages/apps/Camera2/+/refs/heads/android13-release/src/com/android/camera/VideoModule.java
@@ -468,16 +468,18 @@ public class Capture extends CordovaPlugin {
 
     public void onVideoActivityResult(Request req, Intent intent) {
         // Get the uri of the video clip
-        Uri data = intent.getData();
-        if (data == null) {
+        if(intent != null) {
+            videoUri = intent.getData();
+        }
+        if (videoUri == null) {
             pendingRequests.resolveWithFailure(req, createErrorObject(CAPTURE_NO_MEDIA_FILES, "Error: data is null"));
             return;
         }
 
         // Create a file object from the uri
-        JSONObject mediaFile = createMediaFile(data);
+        JSONObject mediaFile = createMediaFile(videoUri);
         if (mediaFile == null) {
-            pendingRequests.resolveWithFailure(req, createErrorObject(CAPTURE_INTERNAL_ERR, "Error: no mediaFile created from " + data));
+            pendingRequests.resolveWithFailure(req, createErrorObject(CAPTURE_INTERNAL_ERR, "Error: no mediaFile created from " + videoUri));
             return;
         }
 
