@@ -20,6 +20,13 @@
 -->
 # Release Notes
 
+### 5.0.0-j5.1
+
+* [#1](https://github.com/j5int/cordova-plugin-media-capture/pull/1) Fix video capture crashing on save
+* [#4](https://github.com/j5int/cordova-plugin-media-capture/pull/4) Enable saving videos to camera roll on iOS
+* [#5](https://github.com/j5int/cordova-plugin-media-capture/pull/5) Work around bug in sdk 33 - this gets the Video working on that platform
+* [#6](https://github.com/j5int/cordova-plugin-media-capture/pull/6) Add FileProvider for Video saving
+
 ### 5.0.0 (Aug 14, 2023)
 
 **Breaking Changes:**
