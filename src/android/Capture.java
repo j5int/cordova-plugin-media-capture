@@ -319,18 +319,11 @@ public class Capture extends CordovaPlugin {
                 this.applicationId + ".cordova.plugin.mediacapture.provider",
                 movie);
         this.videoAbsolutePath = movie.getAbsolutePath();
-        if(Build.VERSION.SDK_INT != 33){
-               // There appears to be a bug in 33 that if we set these it doesn't call generateVideoValues()
-               // See https://android.googlesource.com/platform/packages/apps/Camera2/+/refs/heads/android13-release/src/com/android/camera/VideoModule.java
-               // VideoModule.java:1263
-               // java.lang.NullPointerException: Attempt to invoke virtual method 'void android.content.ContentValues.put(java.lang.String, java.lang.Long)' on a null object reference
-                intent.putExtra(android.provider.MediaStore.EXTRA_OUTPUT, videoUri);
-                intent.addFlags(Intent.FLAG_GRANT_WRITE_URI_PERMISSION);
-                LOG.d(LOG_TAG, "Recording a video and saving to: " + this.videoAbsolutePath);
-                intent.putExtra("android.intent.extra.durationLimit", req.duration);
-                intent.putExtra("android.intent.extra.videoQuality", req.quality);
-        }
-        
+        intent.putExtra(android.provider.MediaStore.EXTRA_OUTPUT, videoUri);
+        intent.addFlags(Intent.FLAG_GRANT_WRITE_URI_PERMISSION);
+        LOG.d(LOG_TAG, "Recording a video and saving to: " + this.videoAbsolutePath);
+        intent.putExtra("android.intent.extra.durationLimit", req.duration);
+        intent.putExtra("android.intent.extra.videoQuality", req.quality);
         this.cordova.startActivityForResult((CordovaPlugin) this, intent, req.requestCode);
     }
 
