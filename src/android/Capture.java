@@ -496,8 +496,6 @@ public class Capture extends CordovaPlugin {
             if (Build.VERSION.SDK_INT == 33 && intent != null && intent.getData() != null) {
                 Uri videoUri = intent.getData();
                 this.videoAbsolutePath = getRealPathFromURI(videoUri);
-                System.out.println("URI: " + videoUri);
-                System.out.println("PATH: " + this.videoAbsolutePath);
             }
            
             // create a file object from the video absolute path
