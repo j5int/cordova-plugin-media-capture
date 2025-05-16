@@ -57,8 +57,6 @@ import android.os.Bundle;
 import android.os.Environment;
 import android.system.Os;
 import android.system.OsConstants;
-import android.database.Cursor;
-import android.provider.MediaStore;
 
 public class Capture extends CordovaPlugin {
 
@@ -321,19 +319,11 @@ public class Capture extends CordovaPlugin {
                 this.applicationId + ".cordova.plugin.mediacapture.provider",
                 movie);
         this.videoAbsolutePath = movie.getAbsolutePath();        
+        intent.putExtra(android.provider.MediaStore.EXTRA_OUTPUT, videoUri);
         intent.addFlags(Intent.FLAG_GRANT_WRITE_URI_PERMISSION);
-        LOG.d(LOG_TAG, "Recording a video and saving to: " + this.videoAbsolutePath);
-
-        if(Build.VERSION.SDK_INT != 33){
-               // There appears to be a bug in 33 that if we set these it doesn't call generateVideoValues()
-               // See https://android.googlesource.com/platform/packages/apps/Camera2/+/refs/heads/android13-release/src/com/android/camera/VideoModule.java
-               // VideoModule.java:1263
-               // java.lang.NullPointerException: Attempt to invoke virtual method 'void android.content.ContentValues.put(java.lang.String, java.lang.Long)' on a null object reference
-                intent.putExtra(android.provider.MediaStore.EXTRA_OUTPUT, videoUri);
-                intent.putExtra("android.intent.extra.durationLimit", req.duration);
-                intent.putExtra("android.intent.extra.videoQuality", req.quality);
-        }
-
+        LOG.d(LOG_TAG, "Recording a video and saving to: " + this.videoAbsolutePath);        
+        intent.putExtra("android.intent.extra.durationLimit", req.duration);
+        intent.putExtra("android.intent.extra.videoQuality", req.quality);
         this.cordova.startActivityForResult((CordovaPlugin) this, intent, req.requestCode);
     }
 
@@ -362,7 +352,7 @@ public class Capture extends CordovaPlugin {
                             onImageActivityResult(req);
                             break;
                         case CAPTURE_VIDEO:
-                            onVideoActivityResult(req, intent);
+                            onVideoActivityResult(req);
                             break;
                     }
                 }
@@ -467,37 +457,8 @@ public class Capture extends CordovaPlugin {
         }
     }
 
-    public String getRealPathFromURI(Uri uri) {
-       String filePath = null;
-       if ("content".equalsIgnoreCase(uri.getScheme())) {
-           String[] projection = { MediaStore.Images.Media.DATA };
-           Cursor cursor = null;
-           try {
-               cursor = cordova.getActivity().getContentResolver().query(uri, projection, null, null, null);
-               if (cursor != null && cursor.moveToFirst()) {
-                   int index = cursor.getColumnIndexOrThrow(MediaStore.Images.Media.DATA);
-                   filePath = cursor.getString(index);
-               }
-           } finally {
-               if (cursor != null) {
-                   cursor.close();
-               }
-           }
-       } else if ("file".equalsIgnoreCase(uri.getScheme())) {
-           filePath = uri.getPath();
-       }
-       return filePath;
-   }
-
-
-    public void onVideoActivityResult(Request req, Intent intent) {
+    public void onVideoActivityResult(Request req) {
         try {
-            // For Android 13, retrieve the video URI from the intent if EXTRA_OUTPUT was not set
-            if (Build.VERSION.SDK_INT == 33 && intent != null && intent.getData() != null) {
-                Uri videoUri = intent.getData();
-                this.videoAbsolutePath = getRealPathFromURI(videoUri);
-            }
-           
             // create a file object from the video absolute path
             JSONObject mediaFile = createMediaFileWithAbsolutePath(this.videoAbsolutePath);
             if (mediaFile == null) {
