@@ -318,10 +318,10 @@ public class Capture extends CordovaPlugin {
         Uri videoUri = FileProvider.getUriForFile(this.cordova.getActivity(),
                 this.applicationId + ".cordova.plugin.mediacapture.provider",
                 movie);
-        this.videoAbsolutePath = movie.getAbsolutePath();
+        this.videoAbsolutePath = movie.getAbsolutePath();        
         intent.putExtra(android.provider.MediaStore.EXTRA_OUTPUT, videoUri);
         intent.addFlags(Intent.FLAG_GRANT_WRITE_URI_PERMISSION);
-        LOG.d(LOG_TAG, "Recording a video and saving to: " + this.videoAbsolutePath);
+        LOG.d(LOG_TAG, "Recording a video and saving to: " + this.videoAbsolutePath);        
         intent.putExtra("android.intent.extra.durationLimit", req.duration);
         intent.putExtra("android.intent.extra.videoQuality", req.quality);
         this.cordova.startActivityForResult((CordovaPlugin) this, intent, req.requestCode);
@@ -458,21 +458,25 @@ public class Capture extends CordovaPlugin {
     }
 
     public void onVideoActivityResult(Request req) {
-        // create a file object from the video absolute path
-        JSONObject mediaFile = createMediaFileWithAbsolutePath(this.videoAbsolutePath);
-        if (mediaFile == null) {
-            pendingRequests.resolveWithFailure(req, createErrorObject(CAPTURE_INTERNAL_ERR, "Error: no mediaFile created from " + this.videoAbsolutePath));
-            return;
-        }
+        try {
+            // create a file object from the video absolute path
+            JSONObject mediaFile = createMediaFileWithAbsolutePath(this.videoAbsolutePath);
+            if (mediaFile == null) {
+                pendingRequests.resolveWithFailure(req, createErrorObject(CAPTURE_INTERNAL_ERR, "Error: no mediaFile created from " + this.videoAbsolutePath));
+                return;
+            }
 
-        req.results.put(mediaFile);
+            req.results.put(mediaFile);
 
-        if (req.results.length() >= req.limit) {
-            // Send Uri back to JavaScript for viewing video
-            pendingRequests.resolveWithSuccess(req);
-        } else {
-            // still need to capture more video clips
-            captureVideo(req);
+            if (req.results.length() >= req.limit) {
+                // Send Uri back to JavaScript for viewing video
+                pendingRequests.resolveWithSuccess(req);
+            } else {
+                // still need to capture more video clips
+                captureVideo(req);
+            }
+        } catch (Exception e) {
+            LOG.e(LOG_TAG, e.getMessage());
         }
     }
 
